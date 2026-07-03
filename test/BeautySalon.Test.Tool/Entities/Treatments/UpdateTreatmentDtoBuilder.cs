@@ -1,0 +1,46 @@
+﻿using BeautySalon.Services.Treatments.Contracts.Dto;
+
+namespace BeautySalon.Test.Tool.Entities.Treatments;
+public class UpdateTreatmentDtoBuilder
+{
+    private readonly UpdateTreatmentDto _dto;
+
+    public UpdateTreatmentDtoBuilder()
+    {
+        _dto = new UpdateTreatmentDto()
+        {
+            Description = "description",
+            Title = "title",
+            Duration=30
+        };
+    }
+    public UpdateTreatmentDtoBuilder WithTitle(string title)
+    {
+        _dto.Title = title;
+        return this;
+    }
+
+
+    public UpdateTreatmentDtoBuilder WithDuration(int duration)
+    {
+        _dto.Duration= duration;
+        return this;
+    }
+
+    public UpdateTreatmentDtoBuilder WithDescription(string description)
+    {
+        _dto.Description=description;
+        return this;    
+    }
+
+    public UpdateTreatmentDtoBuilder WithPrice(decimal price)
+    {
+        _dto.Price=price;
+        return this;
+    }
+
+    public UpdateTreatmentDto Build()
+    {
+        return _dto;
+    }
+}

@@ -1,0 +1,11 @@
+**/bin/
+**/obj/
+
+.vs/
+.git/
+.github/
+
+.gitignore
+.gitattributes
+
+README.md

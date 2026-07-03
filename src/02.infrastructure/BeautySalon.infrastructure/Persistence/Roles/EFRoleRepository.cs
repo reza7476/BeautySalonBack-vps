@@ -1,0 +1,43 @@
+﻿using BeautySalon.Entities.Roles;
+using BeautySalon.Entities.Users;
+using BeautySalon.Services.Roles.Contracts;
+using BeautySalon.Services.Roles.Contracts.Dtos;
+using Microsoft.EntityFrameworkCore;
+
+namespace BeautySalon.infrastructure.Persistence.Roles;
+public class EFRoleRepository : IRoleRepository
+{
+    private readonly DbSet<Role> _roles;
+    private readonly DbSet<UserRole> _userRoles;
+
+    public EFRoleRepository(EFDataContext context)
+    {
+        _roles = context.Set<Role>();
+        _userRoles = context.Set<UserRole>();
+
+    }
+
+    public async Task Add(Role newRole)
+    {
+        await _roles.AddAsync(newRole);
+    }
+
+    public async Task AssignRoleToUser(UserRole newUserRole)
+    {
+        await _userRoles.AddAsync(newUserRole);
+    }
+
+    public async Task<GetRoleDto?> GetRoleByName(string roleName)
+    {
+        return await _roles.Where(_ => _.RoleName == roleName)
+            .Select(_ => new GetRoleDto()
+            {
+                Id = _.Id,
+            }).FirstOrDefaultAsync();
+    }
+
+    public async Task<bool> IsExistByName(string roleName)
+    {
+        return await _roles.AnyAsync(_ => _.RoleName == roleName);
+    }
+}

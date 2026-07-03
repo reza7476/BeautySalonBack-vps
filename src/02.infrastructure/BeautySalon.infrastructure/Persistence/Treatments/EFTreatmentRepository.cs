@@ -1,0 +1,227 @@
+﻿using BeautySalon.Common.Dtos;
+using BeautySalon.Common.Interfaces;
+using BeautySalon.Entities.Appointments;
+using BeautySalon.Entities.Treatments;
+using BeautySalon.infrastructure.Persistence.Extensions.Paginations;
+using BeautySalon.Services.Treatments.Contracts;
+using BeautySalon.Services.Treatments.Contracts.Dto;
+using Microsoft.EntityFrameworkCore;
+
+namespace BeautySalon.infrastructure.Persistence.Treatments;
+public class EFTreatmentRepository : ITreatmentRepository
+{
+    private readonly DbSet<Treatment> _treatments;
+    private readonly DbSet<TreatmentImage> _treatmentImages;
+    private readonly DbSet<Appointment> _appointments;
+
+
+    public EFTreatmentRepository(EFDataContext context)
+    {
+        _treatments = context.Set<Treatment>();
+        _treatmentImages = context.Set<TreatmentImage>();
+        _appointments = context.Set<Appointment>();
+    }
+
+    public async Task Add(Treatment treatment)
+    {
+        await _treatments.AddAsync(treatment);
+    }
+
+    public async Task AddImage(TreatmentImage treatmentImage)
+    {
+        await _treatmentImages.AddAsync(treatmentImage);
+    }
+
+    public async Task<bool> ExistById(long id)
+    {
+        return await _treatments.AnyAsync(_ => _.Id == id);
+    }
+
+    public async Task<Treatment?> FindById(long id)
+    {
+        return await _treatments.FirstOrDefaultAsync(_ => _.Id == id);
+    }
+
+    public async Task<TreatmentImage?> FindImageByImageId(long imageId)
+    {
+        return await _treatmentImages.FirstOrDefaultAsync(_ => _.Id == imageId);
+    }
+
+    public async Task<IPageResult<GetAllTreatmentsDto>>
+        GetAll(IPagination? pagination)
+    {
+        var query = _treatments
+            .Include(_ => _.Images)
+            .Select(_ => new GetAllTreatmentsDto()
+            {
+                Description = _.Description,
+                Title = _.Title,
+                Id = _.Id,
+                Price = _.Price,
+                Media = _.Images.Select(media => new MediaDto()
+                {
+                    Extension = media.Extension,
+                    URL = media.URL,
+                    ImageName = media.ImageName,
+                    UniqueName = media.ImageUniqueName
+                }).First()
+            }).AsQueryable();
+
+        return await query.Paginate(pagination ?? new Pagination());
+    }
+
+    public async Task<List<GetAllTreatmentsForAppointmentDto>> GetAllForAppointment()
+    {
+        return await _treatments.Select(_ => new GetAllTreatmentsForAppointmentDto()
+        {
+            Id = _.Id,
+            Title = _.Title
+        }).ToListAsync();
+    }
+
+    public async Task<List<GetTreatmentTitleForListAppointmentFilterDto>> GetAllTitles()
+    {
+        return await _treatments.Select(_ => new GetTreatmentTitleForListAppointmentFilterDto
+        {
+            Title = _.Title
+        }).ToListAsync();
+    }
+
+    public async Task<GetTreatmentDetailsDto?> GetDetails(long id)
+    {
+        return await _treatments
+            .Where(_ => _.Id == id)
+            .Include(_ => _.Images)
+            .Select(_ => new GetTreatmentDetailsDto()
+            {
+                Description = _.Description,
+                Title = _.Title,
+                Duration = _.Duration,
+                Price = _.Price,
+                Media = _.Images.Select(media => new MediaDto()
+                {
+                    Extension = media.Extension,
+                    URL = media.URL,
+                    UniqueName = media.ImageUniqueName,
+                    ImageName = media.ImageName,
+                    Id = media.Id
+                }).ToList()
+            }).FirstOrDefaultAsync();
+    }
+
+    public async Task<GetTreatmentDetailsForAppointmentDto?> GetDetailsForAppointment(long id)
+    {
+        return await _treatments.Where(_ => _.Id == id)
+            .Include(_ => _.Images)
+            .Select(_ => new GetTreatmentDetailsForAppointmentDto()
+            {
+                Description = _.Description,
+                Title = _.Title,
+                Duration = _.Duration,
+                Price = _.Price,
+                Image = _.Images.Select(img => new ImageDetailsDto()
+                {
+                    Extension = img.Extension,
+                    ImageName = img.ImageName,
+                    UniqueName = img.ImageUniqueName,
+                    URL = img.URL
+                }).First(),
+            }).FirstOrDefaultAsync();
+    }
+
+    public async Task<List<GetTreatmentForLandingDto>> GetForLanding()
+    {
+        return await _treatments
+            .Include(_ => _.Images)
+            .Select(_ => new GetTreatmentForLandingDto()
+            {
+                Description = _.Description,
+                Id = _.Id,
+                Title = _.Title,
+                Rate = (_.Appointments
+                          .Average(a => (double?)a.Review!.Rate) ?? 0),
+                Media = _.Images != null ? _.Images.Select(media => new MediaDto()
+                {
+                    Extension = media.Extension,
+                    ImageName = media.ImageName,
+                    UniqueName = media.ImageUniqueName,
+                    URL = media.URL,
+                    Id = media.Id
+                }).FirstOrDefault() : null
+            }).ToListAsync();
+    }
+
+    public async Task<List<GetPopularTreatmentsDto>> GetPopularTreatments()
+    {
+        var start = DateTime.UtcNow.AddDays(-30);
+        var query = await (
+                   from appointment in _appointments
+                   join treatment in _treatments
+                   on appointment.TreatmentId equals treatment.Id
+                   where appointment.AppointmentDate >= start
+                   group appointment by new
+                   {
+                       appointment.TreatmentId,
+                       treatment.Title,
+                   } into g
+                   orderby g.Count() descending
+                   select new GetPopularTreatmentsDto()
+                   {
+                       AppointmentCount = g.Count(),
+                       Title = g.Key.Title,
+                       Image = _treatmentImages
+                       .Where(_ => _.TreatmentId == g.Key.TreatmentId)
+                       .Select(_ => new ImageDetailsDto()
+                       {
+                           Extension = _.Extension,
+                           ImageName = _.ImageName,
+                           UniqueName = _.ImageUniqueName,
+                           URL = _.URL
+                       }).FirstOrDefault(),
+                       Id = g.Key.TreatmentId
+                   }).Take(3)
+                   .ToListAsync();
+
+        return query;
+    }
+
+    public async Task<List<TreatmentImage>> GetTreatmentImages(long id)
+    {
+        return await _treatmentImages.Where(_ => _.TreatmentId == id).ToListAsync();
+    }
+
+    public async Task<IPageResult<GetAllTreatmentGalleryImageDto>> 
+        GetTreatmentsGalleryForLanding(IPagination? pagination)
+    {
+        var query = _treatmentImages
+                   .Include(img => img.Treatment)
+                   .OrderBy(img => img.Id) // یا هر ترتیبی که می‌خواهید
+                   .Select(img => new GetAllTreatmentGalleryImageDto
+                   {
+                       TreatmentTitle = img.Treatment.Title,
+                       Images = new List<ImageDetailsDto>
+                       {
+                           new ImageDetailsDto
+                           {
+                               Extension = img.Extension,
+                               ImageName = img.ImageName,
+                               UniqueName = img.ImageUniqueName,
+                               URL = img.URL
+                           }
+                       }
+                   });
+
+        return await query.Paginate(pagination ?? new Pagination());
+    }
+
+    public async Task<bool> IsExistByTitle(string title)
+    {
+        return await _treatments.AnyAsync(_ => _.Title == title);
+    }
+
+    public async Task RemoveImage(TreatmentImage treatmentImage)
+    {
+        _treatmentImages.Remove(treatmentImage);
+        await Task.CompletedTask;
+    }
+}
