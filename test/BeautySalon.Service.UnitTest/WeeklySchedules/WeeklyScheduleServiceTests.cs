@@ -22,8 +22,8 @@ public class WeeklyScheduleServiceTests : BusinessUnitTest
     {
         var dto = new AddWeeklyScheduleDtoBuilder()
             .WithDayOfWeek(DayWeek.Saturday)
-            .WithEndTime(DateTime.Now.AddHours(1))
-            .WithStartTime(DateTime.Now)
+            .WithStartTime(new TimeOnly(8,1))
+            .WithEndTime(new TimeOnly(10,1))
             .WithIsActive()
             .Build();
 
@@ -57,13 +57,13 @@ public class WeeklyScheduleServiceTests : BusinessUnitTest
         var schedule = new WeeklyScheduleBuilder()
             .WithIsActive(true)
             .WithDay(DayWeek.Monday)
-            .WithStartTime(DateTime.Now)
-            .WithEndTime(DateTime.Now.AddHours(8))
+            .WithStartTime(new TimeOnly(8,1))
+            .WithEndTime(new TimeOnly(10, 1))
             .Build();
         Save(schedule);
         var dto = new EditWeeklyScheduleDtoBuilder()
-            .WithStartTime(DateTime.Now)
-            .WithEndTime(DateTime.Now.AddHours(8))
+            .WithStartTime(new TimeOnly(8,1))
+            .WithEndTime(new TimeOnly(10, 1))
             .WithDayOfWeek(DayWeek.Saturday)
             .WithIsActive()
             .WithId(schedule.Id)
@@ -95,8 +95,8 @@ public class WeeklyScheduleServiceTests : BusinessUnitTest
     public async Task Add_should_throw_exception_when_end_time_is_less_than_start_time()
     {
         var dto=new AddWeeklyScheduleDtoBuilder()
-            .WithStartTime(DateTime.Now.AddHours(3))
-            .WithEndTime(DateTime.Now)
+            .WithStartTime(new TimeOnly(8,1))
+            .WithEndTime(new TimeOnly(10,1))
             .Build();
 
         Func<Task> expected=async()=>await _sut.Add(dto);
@@ -112,8 +112,8 @@ public class WeeklyScheduleServiceTests : BusinessUnitTest
         Save(schedule);
 
         var dto = new EditWeeklyScheduleDtoBuilder()
-            .WithStartTime(DateTime.Now.AddHours(3))
-            .WithEndTime(DateTime.Now)
+            .WithStartTime(new TimeOnly(8,1))
+            .WithEndTime(new TimeOnly(10,1))
             .WithId(schedule.Id)
             .Build();
 

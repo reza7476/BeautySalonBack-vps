@@ -21,8 +21,8 @@ public class WeeklyScheduleServiceTests : BusinessIntegrationTest
         var schedules = new WeeklyScheduleBuilder()
             .WithIsActive(true)
             .WithDay(DayWeek.Monday)
-            .WithEndTime(DateTime.UtcNow.AddHours(8))
-            .WithStartTime(DateTime.UtcNow)
+            .WithStartTime(new TimeOnly(8,1))
+            .WithEndTime(new TimeOnly(10,1))
             .Build();
         Save(schedules);
 
@@ -38,8 +38,8 @@ public class WeeklyScheduleServiceTests : BusinessIntegrationTest
     public async Task GetDaySchedule_should_return_day_schedule_properly()
     {
         var schedule = new WeeklyScheduleBuilder()
-            .WithStartTime(DateTime.Now)
-            .WithEndTime(DateTime.Now.AddHours(8))
+            .WithStartTime(new TimeOnly(8,1))
+            .WithEndTime(new TimeOnly(10,1))
             .WithDay(DayWeek.Monday)
             .WithIsActive(true)
             .Build();

@@ -24,7 +24,7 @@ public class AddWeeklyScheduleDtoBuilder
         return this;
     }
 
-    public AddWeeklyScheduleDtoBuilder WithEndTime(TimeOnly time)
+    public AddWeeklyScheduleDtoBuilder WithEndTime(TimeOnly  time)
     {
         _dto.EndTime = time;
         return this;
